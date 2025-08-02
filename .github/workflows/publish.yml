@@ -33,20 +33,21 @@ jobs:
 
       - run: npm ci --prefer-offline --no-audit --no-fund --loglevel error
 
-      - run: npm run build
+      # - run: npm run build
 
       - name: Publish to "latest"
         run: |
           cat apps/owox/package.json
 
-      - name: Extract version
-        id: extract_version
+      - name: Extract "latest" version
+        id: extract_latest_version
         run: |
           VERSION=$(npm pkg get version -w apps/owox | grep -oE '"[0-9]+(\.[0-9]+)*"' | tr -d '"')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
 
-      - name: Check if container image with this version exists
-        id: image_exists
+      - name: Check if container image with this "latest" version exists
+        id: latest_image_exists
         run: |
           if docker manifest inspect ghcr.io/${{ github.repository }}:${{ steps.extract_version.outputs.version }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -55,17 +56,17 @@ jobs:
           fi
           cat $GITHUB_OUTPUT
 
-      - name: Build and push Docker image
-        if: steps.image_exists.outputs.exists == 'false'
+      - name: Build and push "latest" container image
+        if: steps.latest_image_exists.outputs.exists == 'false'
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          push: false
           platforms: linux/amd64,linux/arm64
           build-args: |
-            version=${{ steps.extract_version.outputs.version }}
+            version=${{ steps.extract_latest_version.outputs.version }}
           tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.extract_version.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ steps.extract_latest_version.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
 
       - name: Create dummy changeset
@@ -81,3 +82,23 @@ jobs:
         run: |
           npx changeset version --snapshot next
           cat apps/owox/package.json
+
+      - name: Extract "next" version
+        id: extract_next_version
+        run: |
+          VERSION=$(npm pkg get version -w apps/owox | grep -oE '"[0-9]+(\.[0-9]+)*"' | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
+
+      - name: Build and push "next" container image
+        if: steps.latest_image_exists.outputs.exists == 'false'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            version=${{ steps.extract_next_version.outputs.version }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.extract_next_version.outputs.version }}
+            ghcr.io/${{ github.repository }}:next
