@@ -10,6 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - run:  echo ghcr.io/${{ github.repository.toLowerCase() }}
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Required for changesets to work properly
